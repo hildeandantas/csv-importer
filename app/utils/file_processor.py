@@ -3,7 +3,7 @@ import os
 import unicodedata
 import re
 from app.db.database import engine
-from sqlalchemy import Column, String, Integer, inspect
+from sqlalchemy import Column, Engine, String, Integer, inspect, text
 from sqlalchemy.orm import declarative_base
 
 
@@ -56,11 +56,22 @@ def get_table_and_column_names(file_path: str, separator: str) -> tuple[str, lis
     
     return table_name, camel_case_columns
 
-def dynamic_table_verify(table_name: str, column_names: list[str], engine):
+def dynamic_table_verify(table_name: str, column_names: list[str], engine: Engine):
     """Cria uma tabela no banco de dados dinamicamente se ela não existir."""
     inspector = inspect(engine)
     if inspector.has_table(table_name):
-        print(f"Aviso: A tabela '{table_name}' já existe. Os dados serão adicionados.")
+        print(f"Aviso: A tabela '{table_name}' já existe no banco de dado!")
+        if inspector.has_table(table_name):
+            with engine.connect() as connection:
+                result = connection.execute(text(f'SELECT COUNT(*) FROM "{table_name}";'))
+                if result.scalar() > 0:
+                    print(f"A tabela '{table_name}' já contém dados. Truncando a tabela...")
+                    connection.execute(text(f'TRUNCATE TABLE "{table_name}";'))
+                    connection.commit()
+                    print('Tabela truncada com sucesso, continuando importação...')
+                else:
+                    print(f"A tabela '{table_name}' está vazia. Adicionando novos dados.")
+
         return
 
     attrs = {
@@ -118,7 +129,7 @@ def process_csv_file(file_name: str):
 
         table_name, columns = get_table_and_column_names(file_path, separator)
         print(f"Nome da tabela: {table_name}")
-        print(f"Colunas: {columns}")
+        print(f"Colunas: {columns[0:4]}...")
 
         dynamic_table_verify(table_name, columns, engine)
 
@@ -130,4 +141,3 @@ def process_csv_file(file_name: str):
 
     except Exception as e:
         print(f"Ocorreu um erro inesperado durante o processamento de '{file_name}': {e}")
-

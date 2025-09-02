@@ -206,6 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Para não gitar os arquivos da pasta temp
 app/models/*
+app/temp/error/*
+app/temp/ok/*
 
 .csv
